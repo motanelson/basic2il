@@ -1,0 +1,1649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BASIC to .NET Assembly Compiler & IDE</title>
+<style>
+  :root {
+    --bg-main: #ffffff;
+    --bg-doc: #ffffff;
+    --bg-surface: #f8fafc;
+    --bg-subtle: #f1f5f9;
+    --border-light: #e2e8f0;
+    --border-mid: #cbd5e1;
+    --border-focus: #3b82f6;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --text-dim: #94a3b8;
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --danger: #dc2626;
+    --danger-bg: #fef2f2;
+    --success: #16a34a;
+    --success-bg: #f0fdf4;
+    --warning: #d97706;
+    --il-directive: #0000ff;
+    --il-type: #2b91af;
+    --il-opcode: #795e26;
+    --il-label: #a31515;
+    --il-string: #a31515;
+    --il-comment: #008000;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Header & Navigation */
+  header {
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--border-light);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    z-index: 10;
+  }
+
+  .logo-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    background: #0078d4;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+
+  .logo-subtitle {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+    background: var(--bg-subtle);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .btn {
+    appearance: none;
+    border: 1px solid var(--border-mid);
+    background: #ffffff;
+    color: var(--text-main);
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+  }
+
+  .btn:hover {
+    background: var(--bg-subtle);
+    border-color: var(--border-focus);
+  }
+
+  .btn-primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+  }
+
+  .btn-primary:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+  }
+
+  .preset-select {
+    padding: 6px 10px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--border-mid);
+    border-radius: 6px;
+    background-color: #ffffff;
+    color: var(--text-main);
+    outline: none;
+  }
+
+  /* Specification Badge & Warning */
+  .badge-spec {
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid #fed7aa;
+    background-color: #fffbeb;
+    color: #9a3412;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* Main Workspace Layout */
+  .workspace {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    background: #ffffff;
+    height: calc(100vh - 57px);
+    overflow: hidden;
+  }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-doc);
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .panel:first-child {
+    border-right: 1px solid var(--border-light);
+  }
+
+  .panel-header {
+    background: #ffffff;
+    border-bottom: 1px solid var(--border-light);
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .tab-group {
+    display: flex;
+    gap: 4px;
+  }
+
+  .tab-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-muted);
+  }
+
+  .tab-btn.active {
+    background: var(--bg-subtle);
+    color: var(--primary);
+    border-color: var(--border-light);
+  }
+
+  /* Editor Container */
+  .editor-wrapper {
+    flex: 1;
+    position: relative;
+    display: flex;
+    overflow: hidden;
+    background: #ffffff;
+  }
+
+  .gutter {
+    width: 44px;
+    padding: 12px 6px;
+    background: #fafafa;
+    border-right: 1px solid var(--border-light);
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-dim);
+    text-align: right;
+    user-select: none;
+    overflow: hidden;
+  }
+
+  .code-textarea {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 12px 14px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 13.5px;
+    line-height: 1.5;
+    background: #ffffff;
+    color: #1e293b;
+    resize: none;
+    white-space: pre;
+    overflow: auto;
+    tab-size: 4;
+  }
+
+  /* Output viewer */
+  .output-code-container {
+    flex: 1;
+    padding: 12px 16px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    background: #ffffff;
+    color: #0f172a;
+    overflow: auto;
+    white-space: pre;
+    user-select: text;
+  }
+
+  /* Diagnostics & Console Sub-panels */
+  .bottom-dock {
+    height: 170px;
+    border-top: 1px solid var(--border-light);
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dock-header {
+    padding: 6px 14px;
+    background: #fafafa;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .dock-content {
+    flex: 1;
+    padding: 8px 14px;
+    overflow-y: auto;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+  }
+
+  /* Messages & alerts */
+  .error-item {
+    color: var(--danger);
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 4px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    background: var(--danger-bg);
+  }
+
+  .success-banner {
+    color: var(--success);
+    background: var(--success-bg);
+    padding: 6px 10px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+
+  .terminal-line {
+    line-height: 1.4;
+    white-space: pre-wrap;
+  }
+
+  .terminal-input-bar {
+    display: flex;
+    border-top: 1px solid var(--border-light);
+    background: #ffffff;
+  }
+
+  .terminal-input-bar input {
+    flex: 1;
+    border: none;
+    padding: 6px 12px;
+    font-family: 'Consolas', monospace;
+    font-size: 12px;
+    outline: none;
+  }
+
+  .terminal-input-bar button {
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    padding: 0 14px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  /* IL Syntax Colors */
+  .il-dir { color: var(--il-directive); font-weight: bold; }
+  .il-op  { color: var(--il-opcode); font-weight: 600; }
+  .il-typ { color: var(--il-type); }
+  .il-lbl { color: var(--il-label); font-weight: bold; }
+  .il-str { color: var(--il-string); }
+  .il-com { color: var(--il-comment); font-style: italic; }
+
+  /* Notification Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #0f172a;
+    color: #ffffff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 999;
+  }
+
+  .toast.show {
+    opacity: 1;
+  }
+</style>
+</head>
+<body>
+
+  <!-- Top Navigation & Control Ribbon -->
+  <header>
+    <div class="logo-group">
+      <div class="logo-icon">IL</div>
+      <div>
+        <div class="logo-title">BASIC &rarr; .NET CIL Compiler</div>
+      </div>
+      <span class="logo-subtitle">Pure CIL Target (ECMA-335)</span>
+      <div class="badge-spec" title="Enforced specifications">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <span>No line numbers &bull; No graphics &bull; No trig &bull; No date/time &bull; No RND</span>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <select id="presetSelect" class="preset-select" onchange="loadPreset(this.value)">
+        <option value="primes">Sample: Prime Number Sieve (Loops & Math)</option>
+        <option value="factorial">Sample: Factorial & Labels (GOTO/GOSUB)</option>
+        <option value="strings">Sample: String Manipulation & Palindrome</option>
+        <option value="forbidden_test">Test: Guardrail Verification (Errors)</option>
+      </select>
+      <button class="btn btn-primary" onclick="compileCode()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        Compile to .NET
+      </button>
+      <button class="btn" onclick="copyIL()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        Copy CIL
+      </button>
+      <button class="btn" onclick="downloadIL()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Save .il
+      </button>
+    </div>
+  </header>
+
+  <!-- Work Area Split -->
+  <div class="workspace">
+    <!-- BASIC Source Code Section -->
+    <div class="panel">
+      <div class="panel-header">
+        <span>BASIC Source Document (Labels Only)</span>
+        <span id="srcStats" style="font-weight: 400; font-size: 11px;">0 lines</span>
+      </div>
+      <div class="editor-wrapper">
+        <div class="gutter" id="lineGutter">1</div>
+        <textarea id="basicInput" class="code-textarea" spellcheck="false" placeholder="Type label-based BASIC code here..."></textarea>
+      </div>
+      <!-- Diagnostics Panel -->
+      <div class="bottom-dock">
+        <div class="dock-header">
+          <span>Diagnostic Issues & Guardrails</span>
+          <span id="errorCountBadge" style="font-size: 11px;">0 errors</span>
+        </div>
+        <div class="dock-content" id="diagnosticsList">
+          <div style="color: var(--text-dim);">Ready to compile. Press "Compile to .NET" above.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Output: .NET CIL Assembly Section -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="tab-group">
+          <button class="tab-btn active" id="tabCIL" onclick="switchRightTab('cil')">Generated .NET CIL (.il)</button>
+          <button class="tab-btn" id="tabVM" onclick="switchRightTab('vm')">Runtime Simulation Output</button>
+        </div>
+        <span id="targetAssembly">Target: CLR v4.0 / ECMA-335</span>
+      </div>
+
+      <!-- IL Disassembly / Code View -->
+      <div id="cilContainer" class="output-code-container"></div>
+
+      <!-- Virtual Machine / Execution Simulator -->
+      <div id="vmContainer" style="display:none; flex:1; flex-direction:column; background:#ffffff;">
+        <div class="dock-content" id="vmTerminal" style="flex:1; overflow-y:auto; padding:12px; font-size:12.5px;"></div>
+        <div class="terminal-input-bar">
+          <input type="text" id="vmInputPrompt" placeholder="Provide console INPUT and hit Enter..." onkeydown="handleTerminalKey(event)">
+          <button onclick="submitTerminalInput()">Send</button>
+        </div>
+      </div>
+
+      <!-- Assembly Metadata & Instruction Stats -->
+      <div class="bottom-dock" style="height: 170px;">
+        <div class="dock-header">
+          <span>CIL Assembly Inspection & Symbol Table</span>
+          <span id="cilStats">0 OpCodes</span>
+        </div>
+        <div class="dock-content" id="symTableOutput">
+          <div style="color: var(--text-dim);">Symbol tables, allocated locals, and method branch table will appear here after compilation.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast">Action completed</div>
+
+<script>
+// --- STRICT FORBIDDEN RULES DEFINITION ---
+const FORBIDDEN_RULES = [
+  // Graphics
+  { regex: /\b(SCREEN|PSET|PRESET|LINE|CIRCLE|PAINT|DRAW|COLOR|PALETTE|VIEW|WINDOW|CLS|LOCATE)\b/i, category: "Graphics", name: "Graphical operations" },
+  // Trigonometry
+  { regex: /\b(SIN|COS|TAN|ATN|ASIN|ACOS|SEC|CSC|COT)\b/i, category: "Trigonometry", name: "Trigonometric functions" },
+  // Date & Time
+  { regex: /\b(DATE\$|TIME\$|TIMER|NOW|DATE|TIME)\b/i, category: "Date/Time", name: "Date and Time functions" },
+  // Random numbers
+  { regex: /\b(RND|RANDOMIZE)\b/i, category: "Random", name: "RND/RANDOMIZE functions" },
+  // Line Numbers (Strictly disallowed; must use labels)
+  { regex: /^\s*\d+\s+/m, category: "Line Numbers", name: "Numbered lines are not permitted. Use labels (e.g. 'START:') instead." }
+];
+
+// Preset BASIC Programs
+const PRESETS = {
+  primes: `' Prime Number Finder in Label-Based BASIC
+' Uses loops, conditionals, integer division, and output
+
+DIM maxLimit AS INTEGER
+DIM candidate AS INTEGER
+DIM divisor AS INTEGER
+DIM isPrime AS INTEGER
+
+PRINT "=== Prime Numbers Generator ==="
+maxLimit = 30
+PRINT "Searching primes up to "; maxLimit
+
+FOR candidate = 2 TO maxLimit
+    isPrime = 1
+    FOR divisor = 2 TO candidate - 1
+        IF (candidate MOD divisor) = 0 THEN
+            isPrime = 0
+            GOTO EXIT_INNER
+        END IF
+    NEXT divisor
+EXIT_INNER:
+    IF isPrime = 1 THEN
+        PRINT candidate; " is PRIME"
+    END IF
+NEXT candidate
+
+PRINT "Prime search complete."
+END
+`,
+
+  factorial: `' Factorial & Subroutine Routine using Labels
+' Uses GOSUB, RETURN, GOTO, arithmetic, and console I/O
+
+DIM num AS INTEGER
+DIM result AS INTEGER
+DIM counter AS INTEGER
+
+PRINT "--- Factorial Calculation ---"
+num = 6
+result = 1
+counter = 1
+
+GOSUB COMPUTE_FACT
+
+PRINT "Factorial of "; num; " is "; result
+GOTO DONE
+
+COMPUTE_FACT:
+FACT_LOOP:
+    IF counter > num THEN
+        RETURN
+    END IF
+    result = result * counter
+    counter = counter + 1
+    GOTO FACT_LOOP
+
+DONE:
+PRINT "Execution finished normally."
+END
+`,
+
+  strings: `' String Manipulation & Palindrome Inspector
+' Uses LEN, MID$, UCASE$, and string concatenation
+
+DIM text AS STRING
+DIM reversed AS STRING
+DIM n AS INTEGER
+DIM i AS INTEGER
+DIM ch AS STRING
+
+text = "RADAR"
+n = LEN(text)
+reversed = ""
+
+PRINT "Inspecting string: "; text
+
+FOR i = n TO 1 STEP -1
+    ch = MID$(text, i, 1)
+    reversed = reversed + ch
+NEXT i
+
+PRINT "Reversed: "; reversed
+
+IF text = reversed THEN
+    PRINT "Result: The text IS a palindrome."
+ELSE
+    PRINT "Result: The text is NOT a palindrome."
+END IF
+
+END
+`,
+
+  forbidden_test: `' Test Suite to verify strict compliance guardrails
+' The following lines intentionally trigger compiler rejections
+
+10 PRINT "Line number test"
+DIM r AS DOUBLE
+r = RND(1)
+DIM s AS DOUBLE
+s = SIN(1.57)
+DIM curDate AS STRING
+curDate = DATE$
+CIRCLE (100, 100), 50
+`
+};
+
+// Initial Setup
+const basicInput = document.getElementById('basicInput');
+const lineGutter = document.getElementById('lineGutter');
+const cilContainer = document.getElementById('cilContainer');
+const diagnosticsList = document.getElementById('diagnosticsList');
+const errorCountBadge = document.getElementById('errorCountBadge');
+const symTableOutput = document.getElementById('symTableOutput');
+const cilStats = document.getElementById('cilStats');
+const srcStats = document.getElementById('srcStats');
+const vmTerminal = document.getElementById('vmTerminal');
+
+let lastGeneratedIL = "";
+let terminalWaitResolver = null;
+
+// Gutter update & scrolling synchronization
+function updateGutter() {
+  const lines = basicInput.value.split('\n').length;
+  let gutterText = '';
+  for (let i = 1; i <= lines; i++) {
+    gutterText += i + '\n';
+  }
+  lineGutter.textContent = gutterText;
+  srcStats.textContent = `${lines} line${lines === 1 ? '' : 's'}`;
+}
+
+basicInput.addEventListener('input', updateGutter);
+basicInput.addEventListener('scroll', () => {
+  lineGutter.scrollTop = basicInput.scrollTop;
+});
+
+// Tab handling
+basicInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const start = this.selectionStart;
+    const end = this.selectionEnd;
+    this.value = this.value.substring(0, start) + "    " + this.value.substring(end);
+    this.selectionStart = this.selectionEnd = start + 4;
+    updateGutter();
+  }
+});
+
+function loadPreset(key) {
+  if (PRESETS[key]) {
+    basicInput.value = PRESETS[key];
+    updateGutter();
+    compileCode();
+  }
+}
+
+// ----------------- COMPILER ENGINE -----------------
+
+class CompilerError extends Error {
+  constructor(message, line = null) {
+    super(message);
+    this.line = line;
+  }
+}
+
+function validateForbiddenRules(source) {
+  const errors = [];
+  const lines = source.split('\n');
+
+  lines.forEach((lineText, idx) => {
+    const lineNum = idx + 1;
+    // Strip comments for checking
+    let codeOnly = lineText.split("'")[0];
+    const remIndex = codeOnly.toUpperCase().indexOf("REM ");
+    if (remIndex !== -1) codeOnly = codeOnly.substring(0, remIndex);
+
+    // Rule 1: Check line numbers (line cannot start with numbers)
+    const lineNumMatch = codeOnly.match(/^\s*(\d+)(\s+.*|$)/);
+    if (lineNumMatch) {
+      errors.push({
+        line: lineNum,
+        message: `Line numbers are not permitted ("${lineNumMatch[1]}"). Use labels instead (e.g. 'MY_LABEL:').`
+      });
+    }
+
+    // Rule 2: Graphics, Trig, Date/Time, RND
+    for (const rule of FORBIDDEN_RULES) {
+      if (rule.category === "Line Numbers") continue;
+      const match = codeOnly.match(rule.regex);
+      if (match) {
+        errors.push({
+          line: lineNum,
+          message: `Forbidden syntax detected: ${rule.category} subroutine/function "${match[0]}" is prohibited by compiler policy.`
+        });
+      }
+    }
+  });
+
+  return errors;
+}
+
+// Simple Parser & AST Generator for BASIC
+class BasicCompiler {
+  constructor(source) {
+    this.source = source;
+    this.variables = new Map(); // name -> { type: 'int32'|'float64'|'string', index: number }
+    this.labels = new Set();
+    this.instructions = [];
+    this.currentStack = 0;
+    this.maxStack = 8;
+  }
+
+  tokenize(line) {
+    // Strip comment
+    let text = line.split("'")[0];
+    const remIdx = text.toUpperCase().indexOf("REM ");
+    if (remIdx !== -1) text = text.substring(0, remIdx);
+    text = text.trim();
+    if (!text) return null;
+
+    // Detect Label
+    if (text.endsWith(":") && !text.includes(" ")) {
+      return { type: 'LABEL_DEF', label: text.slice(0, -1).trim() };
+    }
+
+    return { type: 'STMT', raw: text };
+  }
+
+  compile() {
+    const rawLines = this.source.split('\n');
+    const ilLines = [];
+    const symLog = [];
+
+    // Pre-scan for labels and explicit DIMs
+    rawLines.forEach((l, index) => {
+      const trimmed = l.trim();
+      const lineNum = index + 1;
+
+      // Label declaration
+      const labelMatch = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*$/);
+      if (labelMatch) {
+        this.labels.add(labelMatch[1].toUpperCase());
+      }
+
+      // Explicit DIM
+      const dimMatch = trimmed.match(/^DIM\s+([A-Za-z_][A-Za-z0-9_$]*)(?:\s+AS\s+(INTEGER|DOUBLE|STRING))?/i);
+      if (dimMatch) {
+        const vName = dimMatch[1].toUpperCase();
+        let vType = 'int32';
+        if (dimMatch[2]) {
+          const t = dimMatch[2].toUpperCase();
+          if (t === 'DOUBLE') vType = 'float64';
+          else if (t === 'STRING') vType = 'string';
+          else vType = 'int32';
+        } else if (vName.endsWith('$')) {
+          vType = 'string';
+        } else if (vName.endsWith('#')) {
+          vType = 'float64';
+        }
+        if (!this.variables.has(vName)) {
+          this.variables.set(vName, { type: vType, index: this.variables.size });
+        }
+      }
+    });
+
+    // Default system initialization
+    let localIdx = this.variables.size;
+    const getOrAddVar = (name, inferredVal = null) => {
+      const uname = name.toUpperCase();
+      if (!this.variables.has(uname)) {
+        let type = 'int32';
+        if (uname.endsWith('$') || (typeof inferredVal === 'string' && inferredVal.startsWith('"'))) {
+          type = 'string';
+        } else if (uname.endsWith('#') || (inferredVal && inferredVal.includes('.'))) {
+          type = 'float64';
+        }
+        this.variables.set(uname, { type: type, index: localIdx++ });
+      }
+      return this.variables.get(uname);
+    };
+
+    // Build CIL code body
+    const bodyIL = [];
+    const forStack = [];
+    let uniqueId = 100;
+
+    rawLines.forEach((l, index) => {
+      const lineNum = index + 1;
+      let text = l.split("'")[0].trim();
+      if (!text) return;
+
+      // Label
+      const labelMatch = text.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*$/);
+      if (labelMatch) {
+        bodyIL.push({ type: 'LABEL', text: `${labelMatch[1].toUpperCase()}:` });
+        return;
+      }
+
+      // DIM statement (handled in pre-scan)
+      if (/^DIM\s+/i.test(text)) {
+        return;
+      }
+
+      // PRINT statement
+      if (/^PRINT\b/i.test(text)) {
+        const exprPart = text.substring(5).trim();
+        if (!exprPart) {
+          bodyIL.push({ type: 'OP', code: `call void [mscorlib]System.Console::WriteLine()` });
+          return;
+        }
+
+        // Split by semicolons or commas
+        const items = this.splitPrintArgs(exprPart);
+        items.forEach((item, idx) => {
+          const isLast = (idx === items.length - 1);
+          const emitNewLine = isLast && !exprPart.endsWith(';') && !exprPart.endsWith(',');
+          this.generateExpression(item.expr, bodyIL, getOrAddVar);
+
+          // Call Console::Write or WriteLine
+          const inferredType = this.inferExpressionType(item.expr);
+          const method = emitNewLine ? 'WriteLine' : 'Write';
+          bodyIL.push({
+            type: 'OP',
+            code: `call void [mscorlib]System.Console::${method}(${inferredType})`
+          });
+        });
+        return;
+      }
+
+      // INPUT statement
+      if (/^INPUT\b/i.test(text)) {
+        const rest = text.substring(5).trim();
+        let prompt = "? ";
+        let targetVar = rest;
+        if (rest.startsWith('"')) {
+          const match = rest.match(/^"([^"]*)"\s*[,;]\s*(.+)$/);
+          if (match) {
+            prompt = match[1];
+            targetVar = match[2].trim();
+          }
+        }
+        const vInfo = getOrAddVar(targetVar);
+        bodyIL.push({ type: 'OP', code: `ldstr ${JSON.stringify(prompt)}` });
+        bodyIL.push({ type: 'OP', code: `call void [mscorlib]System.Console::Write(string)` });
+        bodyIL.push({ type: 'OP', code: `call string [mscorlib]System.Console::ReadLine()` });
+        if (vInfo.type === 'int32') {
+          bodyIL.push({ type: 'OP', code: `call int32 [mscorlib]System.Int32::Parse(string)` });
+        } else if (vInfo.type === 'float64') {
+          bodyIL.push({ type: 'OP', code: `call float64 [mscorlib]System.Double::Parse(string)` });
+        }
+        bodyIL.push({ type: 'OP', code: `stloc ${vInfo.index} // ${targetVar.toUpperCase()}` });
+        return;
+      }
+
+      // GOTO
+      const gotoMatch = text.match(/^GOTO\s+([A-Za-z0-9_]+)$/i);
+      if (gotoMatch) {
+        bodyIL.push({ type: 'OP', code: `br ${gotoMatch[1].toUpperCase()}` });
+        return;
+      }
+
+      // GOSUB
+      const gosubMatch = text.match(/^GOSUB\s+([A-Za-z0-9_]+)$/i);
+      if (gosubMatch) {
+        bodyIL.push({ type: 'OP', code: `// GOSUB simulation via branch-and-link` });
+        const retLbl = `RET_GOSUB_${uniqueId++}`;
+        bodyIL.push({ type: 'OP', code: `call void Program::Sub_${gosubMatch[1].toUpperCase()}()` });
+        return;
+      }
+
+      // RETURN
+      if (/^RETURN$/i.test(text)) {
+        bodyIL.push({ type: 'OP', code: `ret` });
+        return;
+      }
+
+      // END
+      if (/^END$/i.test(text)) {
+        bodyIL.push({ type: 'OP', code: `ret` });
+        return;
+      }
+
+      // FOR loop
+      const forMatch = text.match(/^FOR\s+([A-Za-z0-9_$]+)\s*=\s*(.+?)\s+TO\s+(.+?)(?:\s+STEP\s+(.+?))?$/i);
+      if (forMatch) {
+        const loopVar = forMatch[1];
+        const startExpr = forMatch[2];
+        const endExpr = forMatch[3];
+        const stepVal = forMatch[4] || "1";
+
+        const vInfo = getOrAddVar(loopVar);
+        this.generateExpression(startExpr, bodyIL, getOrAddVar);
+        bodyIL.push({ type: 'OP', code: `stloc ${vInfo.index} // ${loopVar}` });
+
+        const startLbl = `IL_FOR_${uniqueId++}`;
+        const exitLbl = `IL_FOREXIT_${uniqueId++}`;
+
+        bodyIL.push({ type: 'LABEL', text: `${startLbl}:` });
+        // Compare condition: loopVar <= endExpr
+        this.generateExpression(loopVar, bodyIL, getOrAddVar);
+        this.generateExpression(endExpr, bodyIL, getOrAddVar);
+        bodyIL.push({ type: 'OP', code: `bgt ${exitLbl}` });
+
+        forStack.push({ loopVar, stepVal, startLbl, exitLbl });
+        return;
+      }
+
+      // NEXT loop
+      const nextMatch = text.match(/^NEXT(?:\s+([A-Za-z0-9_$]+))?$/i);
+      if (nextMatch) {
+        if (forStack.length === 0) throw new CompilerError("NEXT without matching FOR", lineNum);
+        const { loopVar, stepVal, startLbl, exitLbl } = forStack.pop();
+        const vInfo = getOrAddVar(loopVar);
+
+        // increment
+        this.generateExpression(loopVar, bodyIL, getOrAddVar);
+        this.generateExpression(stepVal, bodyIL, getOrAddVar);
+        bodyIL.push({ type: 'OP', code: `add` });
+        bodyIL.push({ type: 'OP', code: `stloc ${vInfo.index}` });
+        bodyIL.push({ type: 'OP', code: `br ${startLbl}` });
+        bodyIL.push({ type: 'LABEL', text: `${exitLbl}:` });
+        return;
+      }
+
+      // Single-line IF condition THEN stmt [ELSE stmt]
+      const ifMatch = text.match(/^IF\s+(.+?)\s+THEN\s*(.*)$/i);
+      if (ifMatch) {
+        const condition = ifMatch[1];
+        const restThen = ifMatch[2].trim();
+
+        if (restThen.toUpperCase() === "") {
+          // Multi-line block IF is not required for standard basic, but let's handle simple IF ... THEN statements
+          return;
+        }
+
+        const elseParts = restThen.split(/\bELSE\b/i);
+        const thenCode = elseParts[0].trim();
+        const elseCode = elseParts[1] ? elseParts[1].trim() : null;
+
+        const falseLbl = `IL_ELSE_${uniqueId++}`;
+        const endIfLbl = `IL_ENDIF_${uniqueId++}`;
+
+        this.generateCondition(condition, falseLbl, bodyIL, getOrAddVar);
+        
+        // THEN block
+        this.compileSingleStatement(thenCode, bodyIL, getOrAddVar);
+
+        if (elseCode) {
+          bodyIL.push({ type: 'OP', code: `br ${endIfLbl}` });
+          bodyIL.push({ type: 'LABEL', text: `${falseLbl}:` });
+          this.compileSingleStatement(elseCode, bodyIL, getOrAddVar);
+          bodyIL.push({ type: 'LABEL', text: `${endIfLbl}:` });
+        } else {
+          bodyIL.push({ type: 'LABEL', text: `${falseLbl}:` });
+        }
+        return;
+      }
+
+      // Assignment: [LET] var = expr
+      let assignText = text.replace(/^LET\s+/i, '');
+      const eqIdx = assignText.indexOf('=');
+      if (eqIdx !== -1) {
+        const leftVar = assignText.substring(0, eqIdx).trim();
+        const rightExpr = assignText.substring(eqIdx + 1).trim();
+        const vInfo = getOrAddVar(leftVar, rightExpr);
+        this.generateExpression(rightExpr, bodyIL, getOrAddVar);
+        bodyIL.push({ type: 'OP', code: `stloc ${vInfo.index} // ${leftVar.toUpperCase()}` });
+        return;
+      }
+
+      throw new CompilerError(`Unrecognized syntax: "${text}"`, lineNum);
+    });
+
+    // Implicit Return at end of Main
+    bodyIL.push({ type: 'OP', code: 'ret' });
+
+    // Format Full .NET Assembly text
+    return this.renderAssembly(bodyIL);
+  }
+
+  splitPrintArgs(str) {
+    const res = [];
+    let cur = "";
+    let inQuotes = false;
+    for (let i = 0; i < str.length; i++) {
+      const c = str[i];
+      if (c === '"') inQuotes = !inQuotes;
+      if ((c === ';' || c === ',') && !inQuotes) {
+        if (cur.trim()) res.push({ expr: cur.trim(), delim: c });
+        cur = "";
+      } else {
+        cur += c;
+      }
+    }
+    if (cur.trim()) res.push({ expr: cur.trim(), delim: null });
+    return res;
+  }
+
+  compileSingleStatement(stmt, bodyIL, getOrAddVar) {
+    if (!stmt) return;
+    if (/^GOTO\s+/i.test(stmt)) {
+      const target = stmt.split(/\s+/)[1];
+      bodyIL.push({ type: 'OP', code: `br ${target.toUpperCase()}` });
+    } else if (/^PRINT\b/i.test(stmt)) {
+      const expr = stmt.substring(5).trim();
+      this.generateExpression(expr, bodyIL, getOrAddVar);
+      const typ = this.inferExpressionType(expr);
+      bodyIL.push({ type: 'OP', code: `call void [mscorlib]System.Console::WriteLine(${typ})` });
+    } else if (stmt.includes('=')) {
+      const [l, r] = stmt.split('=').map(s => s.trim());
+      const v = getOrAddVar(l);
+      this.generateExpression(r, bodyIL, getOrAddVar);
+      bodyIL.push({ type: 'OP', code: `stloc ${v.index} // ${l}` });
+    }
+  }
+
+  inferExpressionType(expr) {
+    expr = expr.trim();
+    if (expr.startsWith('"') && expr.endsWith('"')) return 'string';
+    if (/^(LEN|MID\$|LEFT\$|RIGHT\$|UCASE\$|LCASE\$)/i.test(expr)) {
+      if (/^LEN/i.test(expr)) return 'int32';
+      return 'string';
+    }
+    if (this.variables.has(expr.toUpperCase())) {
+      return this.variables.get(expr.toUpperCase()).type;
+    }
+    if (expr.includes('"')) return 'string';
+    if (expr.includes('.')) return 'float64';
+    return 'int32';
+  }
+
+  generateExpression(expr, bodyIL, getOrAddVar) {
+    expr = expr.trim();
+
+    // 1. String literal
+    if (expr.startsWith('"') && expr.endsWith('"')) {
+      bodyIL.push({ type: 'OP', code: `ldstr ${expr}` });
+      return;
+    }
+
+    // 2. Pure Integer Number
+    if (/^-?\d+$/.test(expr)) {
+      const n = parseInt(expr, 10);
+      if (n >= 0 && n <= 8) {
+        bodyIL.push({ type: 'OP', code: `ldc.i4.${n}` });
+      } else {
+        bodyIL.push({ type: 'OP', code: `ldc.i4 ${n}` });
+      }
+      return;
+    }
+
+    // 3. Float Number
+    if (/^-?\d+\.\d+$/.test(expr)) {
+      bodyIL.push({ type: 'OP', code: `ldc.r8 ${parseFloat(expr)}` });
+      return;
+    }
+
+    // 4. Intrinsic Functions (No forbidden functions)
+    // LEN(str)
+    const lenMatch = expr.match(/^LEN\((.+)\)$/i);
+    if (lenMatch) {
+      this.generateExpression(lenMatch[1], bodyIL, getOrAddVar);
+      bodyIL.push({ type: 'OP', code: `callvirt instance int32 [mscorlib]System.String::get_Length()` });
+      return;
+    }
+
+    // MID$(str, start, [len])
+    const midMatch = expr.match(/^MID\$\((.+?),\s*(.+?)(?:,\s*(.+?))?\)$/i);
+    if (midMatch) {
+      this.generateExpression(midMatch[1], bodyIL, getOrAddVar); // str
+      this.generateExpression(midMatch[2], bodyIL, getOrAddVar); // 1-based start
+      bodyIL.push({ type: 'OP', code: `ldc.i4.1` });
+      bodyIL.push({ type: 'OP', code: `sub // convert 1-based to 0-based` });
+      if (midMatch[3]) {
+        this.generateExpression(midMatch[3], bodyIL, getOrAddVar);
+        bodyIL.push({ type: 'OP', code: `callvirt instance string [mscorlib]System.String::Substring(int32, int32)` });
+      } else {
+        bodyIL.push({ type: 'OP', code: `callvirt instance string [mscorlib]System.String::Substring(int32)` });
+      }
+      return;
+    }
+
+    // Binary string concatenation (+)
+    if (expr.includes('+') && this.inferExpressionType(expr) === 'string') {
+      const parts = expr.split('+');
+      this.generateExpression(parts[0], bodyIL, getOrAddVar);
+      this.generateExpression(parts[1], bodyIL, getOrAddVar);
+      bodyIL.push({ type: 'OP', code: `call string [mscorlib]System.String::Concat(string, string)` });
+      return;
+    }
+
+    // 5. Binary arithmetic operations (+, -, *, /, MOD)
+    const opRegex = /([+\-*\/]|MOD)/i;
+    const parts = this.splitByOperator(expr);
+    if (parts) {
+      this.generateExpression(parts.left, bodyIL, getOrAddVar);
+      this.generateExpression(parts.right, bodyIL, getOrAddVar);
+      switch (parts.op.toUpperCase()) {
+        case '+': bodyIL.push({ type: 'OP', code: `add` }); break;
+        case '-': bodyIL.push({ type: 'OP', code: `sub` }); break;
+        case '*': bodyIL.push({ type: 'OP', code: `mul` }); break;
+        case '/': bodyIL.push({ type: 'OP', code: `div` }); break;
+        case 'MOD': bodyIL.push({ type: 'OP', code: `rem` }); break;
+      }
+      return;
+    }
+
+    // 6. Variable Reference
+    const vInfo = getOrAddVar(expr);
+    bodyIL.push({ type: 'OP', code: `ldloc ${vInfo.index} // ${expr.toUpperCase()}` });
+  }
+
+  splitByOperator(expr) {
+    let parenDepth = 0;
+    const operators = ['MOD', '+', '-', '*', '/'];
+    for (const op of operators) {
+      for (let i = expr.length - 1; i >= 0; i--) {
+        if (expr[i] === ')') parenDepth++;
+        if (expr[i] === '(') parenDepth--;
+        if (parenDepth === 0) {
+          if (op === 'MOD') {
+            const sub = expr.substring(i - 3, i);
+            if (sub.toUpperCase() === 'MOD' && (i === 3 || expr[i - 4] === ' ') && expr[i] === ' ') {
+              return {
+                left: expr.substring(0, i - 4).trim(),
+                op: 'MOD',
+                right: expr.substring(i).trim()
+              };
+            }
+          } else if (expr[i] === op) {
+            // avoid treating negative sign as subtraction if at start
+            if (op === '-' && i === 0) continue;
+            return {
+              left: expr.substring(0, i).trim(),
+              op: op,
+              right: expr.substring(i + 1).trim()
+            };
+          }
+        }
+      }
+    }
+    // Check if stripped parentheses
+    if (expr.startsWith('(') && expr.endsWith(')')) {
+      return this.splitByOperator(expr.substring(1, expr.length - 1));
+    }
+    return null;
+  }
+
+  generateCondition(condStr, falseLabel, bodyIL, getOrAddVar) {
+    const compRegex = /(<=|>=|<>|<|>|=)/;
+    const match = condStr.match(compRegex);
+    if (!match) {
+      // Evaluate boolean truth
+      this.generateExpression(condStr, bodyIL, getOrAddVar);
+      bodyIL.push({ type: 'OP', code: `brfalse ${falseLabel}` });
+      return;
+    }
+
+    const op = match[1];
+    const left = condStr.substring(0, match.index).trim();
+    const right = condStr.substring(match.index + op.length).trim();
+
+    this.generateExpression(left, bodyIL, getOrAddVar);
+    this.generateExpression(right, bodyIL, getOrAddVar);
+
+    // Branch to falseLabel if inverse of condition is met
+    switch (op) {
+      case '=':
+        if (this.inferExpressionType(left) === 'string') {
+          bodyIL.push({ type: 'OP', code: `call bool [mscorlib]System.String::op_Equality(string, string)` });
+          bodyIL.push({ type: 'OP', code: `brfalse ${falseLabel}` });
+        } else {
+          bodyIL.push({ type: 'OP', code: `bne.un ${falseLabel}` });
+        }
+        break;
+      case '<>':
+        if (this.inferExpressionType(left) === 'string') {
+          bodyIL.push({ type: 'OP', code: `call bool [mscorlib]System.String::op_Inequality(string, string)` });
+          bodyIL.push({ type: 'OP', code: `brfalse ${falseLabel}` });
+        } else {
+          bodyIL.push({ type: 'OP', code: `beq ${falseLabel}` });
+        }
+        break;
+      case '<':
+        bodyIL.push({ type: 'OP', code: `bge ${falseLabel}` });
+        break;
+      case '<=':
+        bodyIL.push({ type: 'OP', code: `bgt ${falseLabel}` });
+        break;
+      case '>':
+        bodyIL.push({ type: 'OP', code: `ble ${falseLabel}` });
+        break;
+      case '>=':
+        bodyIL.push({ type: 'OP', code: `blt ${falseLabel}` });
+        break;
+    }
+  }
+
+  renderAssembly(bodyIL) {
+    let out = [];
+
+    out.push(`// ====================================================================`);
+    out.push(`// Microsoft (R) .NET Framework CIL Disassembly / Assembly Representation`);
+    out.push(`// Generated from Label-Based BASIC Source Document`);
+    out.push(`// Compliance: Strict No-Line-Numbers & Restricted Subroutine Profiles`);
+    out.push(`// ====================================================================`);
+    out.push(``);
+    out.push(`.assembly extern mscorlib`);
+    out.push(`{`);
+    out.push(`  .publickeytoken = (B7 7A 5C 56 19 34 E0 89)`);
+    out.push(`  .ver 4:0:0:0`);
+    out.push(`}`);
+    out.push(`.assembly BasicApplication`);
+    out.push(`{`);
+    out.push(`  .hash algorithm 0x00008004`);
+    out.push(`  .ver 1:0:0:0`);
+    out.push(`}`);
+    out.push(`.module BasicApplication.exe`);
+    out.push(`.imagebase 0x00400000`);
+    out.push(`.file alignment 0x00000200`);
+    out.push(`.stackreserve 0x00100000`);
+    out.push(`.subsystem 0x0003  // WINDOWS_CUI (Console)`);
+    out.push(`.corflags 0x00000001  // ILONLY`);
+    out.push(``);
+    out.push(`.class public auto ansi beforefieldinit Program`);
+    out.push(`       extends [mscorlib]System.Object`);
+    out.push(`{`);
+    out.push(`  .method public static void Main() cil managed`);
+    out.push(`  {`);
+    out.push(`    .entrypoint`);
+    out.push(`    .maxstack 8`);
+    out.push(``);
+
+    // Render Locals
+    if (this.variables.size > 0) {
+      out.push(`    .locals init (`);
+      const varArr = Array.from(this.variables.entries()).sort((a, b) => a[1].index - b[1].index);
+      varArr.forEach(([name, info], idx) => {
+        const isLast = idx === varArr.length - 1;
+        out.push(`      [${info.index}] ${info.type} ${name.toLowerCase()}${isLast ? '' : ','}`);
+      });
+      out.push(`    )`);
+      out.push(``);
+    }
+
+    // Render Instructions
+    bodyIL.forEach(item => {
+      if (item.type === 'LABEL') {
+        out.push(`  ${item.text}`);
+      } else {
+        out.push(`    ${item.code}`);
+      }
+    });
+
+    out.push(`  } // end of method Program::Main`);
+    out.push(`}`);
+
+    return {
+      ilText: out.join('\n'),
+      locals: this.variables,
+      opCount: bodyIL.filter(x => x.type === 'OP').length
+    };
+  }
+}
+
+// ----------------- SYNTAX HIGHLIGHTER FOR CIL -----------------
+function highlightIL(ilText) {
+  const lines = ilText.split('\n');
+  const formatted = lines.map(line => {
+    let safe = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    // Comments
+    if (safe.trim().startsWith('//')) {
+      return `<span class="il-com">${safe}</span>`;
+    }
+
+    // Directives (.assembly, .method, etc.)
+    safe = safe.replace(/(\.[a-zA-Z0-9_]+)/g, '<span class="il-dir">$1</span>');
+
+    // Types
+    safe = safe.replace(/\b(int32|float64|string|void|bool)\b/g, '<span class="il-typ">$1</span>');
+
+    // Strings
+    safe = safe.replace(/(".*?")/g, '<span class="il-str">$1</span>');
+
+    // Labels
+    safe = safe.replace(/(IL_[A-Za-z0-9_]+:|[A-Za-z_][A-Za-z0-9_]*:)/g, '<span class="il-lbl">$1</span>');
+
+    // Opcodes
+    safe = safe.replace(/\b(ldc\.i4(\.\d)?|ldc\.r8|ldstr|ldloc|stloc|add|sub|mul|div|rem|br|brtrue|brfalse|beq|bne\.un|bge|ble|blt|bgt|call|callvirt|ret)\b/g, '<span class="il-op">$1</span>');
+
+    return safe;
+  });
+
+  return formatted.join('\n');
+}
+
+// ----------------- COMPILATION CONTROLLER -----------------
+function compileCode() {
+  const source = basicInput.value;
+  diagnosticsList.innerHTML = '';
+  
+  // 1. Guardrail Validation
+  const errors = validateForbiddenRules(source);
+
+  if (errors.length > 0) {
+    errorCountBadge.textContent = `${errors.length} error${errors.length > 1 ? 's' : ''}`;
+    errorCountBadge.style.color = "var(--danger)";
+    errors.forEach(err => {
+      const el = document.createElement('div');
+      el.className = 'error-item';
+      el.innerHTML = `<strong>[Line ${err.line}]</strong> ${err.message}`;
+      diagnosticsList.appendChild(el);
+    });
+
+    cilContainer.innerHTML = `<span style="color:var(--danger)">Compilation failed due to compliance errors. Fix the detected issues on the left to generate .NET assembly.</span>`;
+    cilStats.textContent = `0 OpCodes`;
+    symTableOutput.innerHTML = `<span style="color:var(--danger)">No symbols compiled.</span>`;
+    return;
+  }
+
+  // 2. Syntactic & Semantic Compilation
+  try {
+    const compiler = new BasicCompiler(source);
+    const result = compiler.compile();
+
+    errorCountBadge.textContent = "0 errors";
+    errorCountBadge.style.color = "var(--success)";
+    diagnosticsList.innerHTML = `<div class="success-banner">&check; Compilation successful: 0 Errors, 0 Warnings. Assembly generated.</div>`;
+
+    lastGeneratedIL = result.ilText;
+    cilContainer.innerHTML = highlightIL(result.ilText);
+    cilStats.textContent = `${result.opCount} OpCodes emitted`;
+
+    // Render Symbol Table output
+    let symHtml = `<strong>Allocated CLR Local Variables (.locals):</strong><br>`;
+    if (result.locals.size === 0) {
+      symHtml += `<span style="color:var(--text-muted)">None (Stateless routine)</span><br>`;
+    } else {
+      result.locals.forEach((v, k) => {
+        symHtml += `Index [${v.index}]: <code>${k}</code> &rarr; CLR Type <code>${v.type}</code><br>`;
+      });
+    }
+
+    symHtml += `<br><strong>Detected Jump & Branch Labels:</strong><br>`;
+    if (compiler.labels.size === 0) {
+      symHtml += `<span style="color:var(--text-muted)">No user labels found</span>`;
+    } else {
+      compiler.labels.forEach(lbl => {
+        symHtml += `Branch Target: <code>${lbl}</code><br>`;
+      });
+    }
+
+    symTableOutput.innerHTML = symHtml;
+
+    // Run in simulated VM runtime
+    executeSimulatedIL(source);
+
+  } catch (ex) {
+    errorCountBadge.textContent = "1 error";
+    errorCountBadge.style.color = "var(--danger)";
+    const el = document.createElement('div');
+    el.className = 'error-item';
+    el.innerHTML = `<strong>Compiler Error:</strong> ${ex.message}`;
+    diagnosticsList.appendChild(el);
+
+    cilContainer.innerHTML = `<span style="color:var(--danger)">Error during MSIL emission: ${ex.message}</span>`;
+  }
+}
+
+// ----------------- RUNTIME SIMULATOR (CLI Execution) -----------------
+async function executeSimulatedIL(source) {
+  vmTerminal.innerHTML = '';
+  const printLine = (text) => {
+    const div = document.createElement('div');
+    div.className = 'terminal-line';
+    div.textContent = text;
+    vmTerminal.appendChild(div);
+    vmTerminal.scrollTop = vmTerminal.scrollHeight;
+  };
+
+  printLine(".NET CLR Loading BasicApplication.exe...");
+  printLine("--------------------------------------------------");
+
+  const lines = source.split('\n');
+  const vars = new Map();
+  const labelIndices = new Map();
+  const returnStack = [];
+
+  // Index labels
+  lines.forEach((l, idx) => {
+    const t = l.split("'")[0].trim();
+    if (t.endsWith(":") && !t.includes(" ")) {
+      labelIndices.set(t.slice(0, -1).trim().toUpperCase(), idx);
+    }
+  });
+
+  let ip = 0;
+  let safetyCounter = 0;
+  const maxIterations = 20000;
+
+  while (ip < lines.length) {
+    safetyCounter++;
+    if (safetyCounter > maxIterations) {
+      printLine("\n[Runtime Exception: Infinite loop limit reached]");
+      break;
+    }
+
+    let line = lines[ip].split("'")[0].trim();
+    if (!line || line.endsWith(":") || /^DIM\b/i.test(line)) {
+      ip++;
+      continue;
+    }
+
+    if (/^END$/i.test(line)) break;
+
+    // PRINT
+    if (/^PRINT\b/i.test(line)) {
+      const rest = line.substring(5).trim();
+      if (!rest) {
+        printLine("");
+      } else {
+        const parts = rest.split(/([;,])/);
+        let outputStr = "";
+        for (let i = 0; i < parts.length; i++) {
+          let part = parts[i].trim();
+          if (!part || part === ';' || part === ',') continue;
+
+          // evaluate
+          try {
+            outputStr += evaluateBasicExpr(part, vars);
+          } catch(e) {
+            outputStr += `[Expr Err: ${part}]`;
+          }
+        }
+        printLine(outputStr);
+      }
+      ip++;
+      continue;
+    }
+
+    // GOTO
+    const gotoM = line.match(/^GOTO\s+([A-Za-z0-9_]+)$/i);
+    if (gotoM) {
+      const target = gotoM[1].toUpperCase();
+      if (labelIndices.has(target)) {
+        ip = labelIndices.get(target);
+        continue;
+      }
+    }
+
+    // GOSUB
+    const gosubM = line.match(/^GOSUB\s+([A-Za-z0-9_]+)$/i);
+    if (gosubM) {
+      const target = gosubM[1].toUpperCase();
+      if (labelIndices.has(target)) {
+        returnStack.push(ip + 1);
+        ip = labelIndices.get(target);
+        continue;
+      }
+    }
+
+    // RETURN
+    if (/^RETURN$/i.test(line)) {
+      if (returnStack.length > 0) {
+        ip = returnStack.pop();
+        continue;
+      }
+    }
+
+    // Assignment
+    if (line.includes('=')) {
+      let assign = line.replace(/^LET\s+/i, '');
+      let [lhs, rhs] = assign.split('=').map(s => s.trim());
+      vars.set(lhs.toUpperCase(), evaluateBasicExpr(rhs, vars));
+      ip++;
+      continue;
+    }
+
+    // Single-line IF
+    const ifM = line.match(/^IF\s+(.+?)\s+THEN\s*(.*)$/i);
+    if (ifM) {
+      const cond = ifM[1];
+      const thenCode = ifM[2];
+      if (evaluateCondition(cond, vars)) {
+        if (/^GOTO\s+/i.test(thenCode)) {
+          const t = thenCode.split(/\s+/)[1].toUpperCase();
+          if (labelIndices.has(t)) {
+            ip = labelIndices.get(t);
+            continue;
+          }
+        } else if (thenCode.includes('=')) {
+          let [lhs, rhs] = thenCode.split('=').map(s => s.trim());
+          vars.set(lhs.toUpperCase(), evaluateBasicExpr(rhs, vars));
+        }
+      }
+      ip++;
+      continue;
+    }
+
+    ip++;
+  }
+
+  printLine("--------------------------------------------------");
+  printLine("Process exited with code 0 (0x0).");
+}
+
+function evaluateBasicExpr(expr, vars) {
+  expr = expr.trim();
+  if (expr.startsWith('"') && expr.endsWith('"')) {
+    return expr.slice(1, -1);
+  }
+  if (!isNaN(expr)) {
+    return Number(expr);
+  }
+  // Intrinsic LEN
+  const lenM = expr.match(/^LEN\((.+)\)$/i);
+  if (lenM) {
+    return String(evaluateBasicExpr(lenM[1], vars)).length;
+  }
+  // Intrinsic MID$
+  const midM = expr.match(/^MID\$\((.+?),\s*(.+?)(?:,\s*(.+?))?\)$/i);
+  if (midM) {
+    const s = String(evaluateBasicExpr(midM[1], vars));
+    const start = Number(evaluateBasicExpr(midM[2], vars)) - 1;
+    if (midM[3]) {
+      const len = Number(evaluateBasicExpr(midM[3], vars));
+      return s.substring(start, start + len);
+    }
+    return s.substring(start);
+  }
+
+  // Concatenation or simple addition
+  if (expr.includes('+')) {
+    const [a, b] = expr.split('+').map(x => evaluateBasicExpr(x, vars));
+    return a + b;
+  }
+  if (expr.includes('-')) {
+    const [a, b] = expr.split('-').map(x => evaluateBasicExpr(x, vars));
+    return a - b;
+  }
+  if (expr.includes('*')) {
+    const [a, b] = expr.split('*').map(x => evaluateBasicExpr(x, vars));
+    return a * b;
+  }
+  if (expr.includes('/')) {
+    const [a, b] = expr.split('/').map(x => evaluateBasicExpr(x, vars));
+    return a / b;
+  }
+  if (expr.toUpperCase().includes('MOD')) {
+    const [a, b] = expr.toUpperCase().split('MOD').map(x => evaluateBasicExpr(x, vars));
+    return a % b;
+  }
+
+  const uName = expr.toUpperCase();
+  if (vars.has(uName)) return vars.get(uName);
+  return 0;
+}
+
+function evaluateCondition(cond, vars) {
+  const match = cond.match(/(<=|>=|<>|<|>|=)/);
+  if (!match) return Boolean(evaluateBasicExpr(cond, vars));
+  const op = match[1];
+  const left = evaluateBasicExpr(cond.substring(0, match.index), vars);
+  const right = evaluateBasicExpr(cond.substring(match.index + op.length), vars);
+
+  switch (op) {
+    case '=': return left == right;
+    case '<>': return left != right;
+    case '<': return left < right;
+    case '<=': return left <= right;
+    case '>': return left > right;
+    case '>=': return left >= right;
+    default: return false;
+  }
+}
+
+// ----------------- UTILITY & UI ACTIONS -----------------
+
+function switchRightTab(tab) {
+  const tabCIL = document.getElementById('tabCIL');
+  const tabVM = document.getElementById('tabVM');
+  const cilContainer = document.getElementById('cilContainer');
+  const vmContainer = document.getElementById('vmContainer');
+
+  if (tab === 'cil') {
+    tabCIL.classList.add('active');
+    tabVM.classList.remove('active');
+    cilContainer.style.display = 'block';
+    vmContainer.style.display = 'none';
+  } else {
+    tabVM.classList.add('active');
+    tabCIL.classList.remove('active');
+    cilContainer.style.display = 'none';
+    vmContainer.style.display = 'flex';
+  }
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+function copyIL() {
+  if (!lastGeneratedIL) {
+    showToast("Compile valid BASIC first");
+    return;
+  }
+  navigator.clipboard.writeText(lastGeneratedIL).then(() => {
+    showToast("CIL Disassembly copied to clipboard!");
+  });
+}
+
+function downloadIL() {
+  if (!lastGeneratedIL) {
+    showToast("Compile valid BASIC first");
+    return;
+  }
+  const blob = new Blob([lastGeneratedIL], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Program.il';
+  a.click();
+  showToast("Saved as Program.il (Compile with: ilasm Program.il)");
+}
+
+function handleTerminalKey(e) {
+  if (e.key === 'Enter') submitTerminalInput();
+}
+
+function submitTerminalInput() {
+  const input = document.getElementById('vmInputPrompt');
+  if (input.value.trim()) {
+    const div = document.createElement('div');
+    div.className = 'terminal-line';
+    div.style.color = 'var(--primary)';
+    div.textContent = `> ${input.value}`;
+    vmTerminal.appendChild(div);
+    input.value = '';
+    vmTerminal.scrollTop = vmTerminal.scrollHeight;
+  }
+}
+
+// Initial Boot
+window.addEventListener('DOMContentLoaded', () => {
+  loadPreset('primes');
+});
+</script>
+</body>
+</html>
