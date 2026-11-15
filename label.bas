@@ -17,7 +17,9 @@ GOTO DONE
 
 COMPUTE_FACT:
 FACT_LOOP:
-    IF counter > num THEN RETURN
+    IF counter > num THEN 
+        RETURN
+    END IF
     
     result = result * counter
     counter = counter + 1
