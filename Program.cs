@@ -150,9 +150,9 @@ internal static class Program
 
             if (result.Errors.Count > 0)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+               // Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine($"Compilation failed: {result.Errors.Count} error(s).");
-                Console.ResetColor();
+                //Console.ResetColor();
                 foreach (var error in result.Errors)
                     Console.WriteLine($"[Line {error.Line}] {error.Message}");
                 Console.WriteLine("No .il file was generated.");
@@ -160,9 +160,9 @@ internal static class Program
             }
 
             File.WriteAllText(outputPath, result.IlText, new UTF8Encoding(false));
-            Console.ForegroundColor = ConsoleColor.Green;
+            //Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("Compilation successful: 0 errors, 0 warnings.");
-            Console.ResetColor();
+            //Console.ResetColor();
             Console.WriteLine($"CIL file saved: {Path.GetFullPath(outputPath)}");
             Console.WriteLine($"OpCodes emitted: {result.OpCount}");
 
@@ -192,9 +192,9 @@ internal static class Program
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
+                //Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine($"[Runtime Exception] {ex.Message}");
-                Console.ResetColor();
+                //Console.ResetColor();
             }
             return 0;
         }
